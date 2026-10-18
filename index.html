@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blackboard Time Tracker</title>
+<style>
+:root{--page:#d9d2c3;--chalk:#f4f1e6;--dim:#cfcbb9;--gold:#ffd96b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--page:#23262c}}
+:root[data-theme="dark"]{--page:#23262c}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--page)}
+body{font-family:"Segoe Print","Bradley Hand","Comic Sans MS","Chalkboard SE",cursive;color:var(--chalk);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+.frame{width:min(1180px,100%);background:linear-gradient(145deg,#8a5d33,#5e3d1f);padding:16px;border-radius:6px;box-shadow:0 18px 40px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.12)}
+.board{position:relative;background:radial-gradient(ellipse at 50% 30%,#2e5446 0%,#223f35 55%,#182d26 100%);border-radius:3px;padding:28px 32px 26px;box-shadow:inset 0 0 40px rgba(0,0,0,.55);min-height:560px}
+.board:before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(115deg,rgba(255,255,255,.012) 0 3px,transparent 3px 9px);border-radius:3px}
+h1{margin:0 0 14px;font-weight:400;font-size:clamp(20px,3vw,30px)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:36px}
+@media (max-width:820px){.grid{grid-template-columns:1fr;gap:22px}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+button{font:inherit;font-size:clamp(15px,1.9vw,20px);color:var(--chalk);background:transparent;border:2.5px solid var(--chalk);border-radius:5px;padding:7px 14px;cursor:pointer;min-height:44px}
+button:hover:not(:disabled){background:rgba(244,241,230,.14)}
+button.on{background:var(--chalk);color:#1d3d33}
+button:disabled{opacity:.35;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.lbl{color:var(--dim);font-size:clamp(15px,1.8vw,19px)}
+#hv{min-width:2.4em;text-align:center;font-size:clamp(18px,2.2vw,24px)}
+.list{min-height:132px;font-size:clamp(17px,2vw,22px);line-height:1.55;margin:4px 0 12px}
+.list div{white-space:pre}
+input{font:inherit;font-size:clamp(16px,2vw,21px);color:var(--chalk);background:transparent;border:2.5px solid var(--chalk);border-radius:5px;padding:7px 12px;min-height:44px;width:min(380px,100%)}
+input::placeholder{color:#a9b5ad}
+.big{text-align:center;font-size:clamp(40px,7.4vw,86px);line-height:1.1;margin:0}
+.big.done{color:var(--gold)}
+.sub{text-align:center;color:var(--dim);font-size:clamp(16px,2vw,22px);margin:4px 0 20px}
+.bar{height:30px;border:2.5px solid var(--chalk);border-radius:4px;padding:2px}
+.bar i{display:block;height:100%;width:0;background:rgba(244,241,230,.88);border-radius:2px;transition:width .4s}
+.pct{text-align:right;color:var(--dim);font-size:clamp(15px,1.8vw,20px);margin:6px 0 16px}
+.st{display:flex;justify-content:space-between;gap:12px;font-size:clamp(17px,2.2vw,26px);padding:7px 0}
+.st span:first-child{color:var(--dim)}
+.toast{min-height:1.5em;color:var(--gold);margin-top:8px;font-size:clamp(15px,1.9vw,20px)}
+.ledge{height:14px;margin:0 -16px -16px;background:linear-gradient(#7a5230,#5e3d1f);border-radius:0 0 6px 6px;position:relative}
+.ledge:after{content:"";position:absolute;left:12%;top:-6px;width:46px;height:8px;background:#f0f0ea;border-radius:2px;box-shadow:70px 0 #e9d9b4,130px 0 #f0f0ea}
+.boyrow{display:flex;align-items:flex-end;justify-content:flex-end;gap:16px;margin-top:14px;flex-wrap:wrap}
+.say{position:relative;background:var(--chalk);color:#1d3d33;border-radius:14px;padding:12px 16px;max-width:430px;font-size:clamp(16px,2vw,22px);line-height:1.3;margin-bottom:34px}
+.say:after{content:"";position:absolute;right:-12px;bottom:22px;border:9px solid transparent;border-left-color:var(--chalk)}
+#boy{flex:none}
+#boy .arm{transform:rotate(-8deg);transform-origin:97px 82px}
+#boy.wave .arm{animation:wv .7s ease-in-out infinite}
+@keyframes wv{0%,100%{transform:rotate(-135deg)}50%{transform:rotate(-168deg)}}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}#boy.wave .arm{animation:none;transform:rotate(-150deg)}}
+</style>
+</head>
+<body>
+<div class="frame">
+  <main class="board">
+    <h1 id="title">Today’s lesson: your 8.5 hour workday</h1>
+    <div class="grid">
+      <section aria-label="Enter your time">
+        <div class="row" id="modes">
+          <button data-h="8.5" class="on">Full 8.5h</button>
+          <button data-h="4.5">Half 4.5h</button>
+          <button data-h="7.5">Move 7.5h</button>
+        </div>
+        <div class="row"><span class="lbl">Custom hours</span><button id="hm" aria-label="Fewer hours">−</button><span id="hv">8.5</span><button id="hp" aria-label="More hours">+</button></div>
+        <div class="lbl">Time stamps</div>
+        <div class="list" id="list" aria-live="polite"></div>
+        <div class="row"><input id="ti" placeholder="Type or paste times, 9:10 AM" autocomplete="off" aria-label="Time, for example 9:10 AM"><button id="add">Add</button></div>
+        <div class="row"><button id="pin">Punch in</button><button id="pout">Punch out</button><button id="undo">Undo</button><button id="clr">Clear</button><button id="demo">Demo</button></div>
+        <div class="toast" id="toast" role="status"></div>
+      </section>
+      <section aria-label="Your progress">
+        <p class="big" id="rem">08h 30m 00s</p>
+        <p class="sub" id="sub">time left, not clocked in</p>
+        <div class="bar"><i id="fill"></i></div>
+        <div class="pct" id="pct">0% done</div>
+        <div class="st"><span>Worked</span><span id="sW">00h 00m 00s</span></div>
+        <div class="st"><span>Break taken</span><span id="sB">00h 00m 00s</span></div>
+        <div class="st"><span>Leaves at</span><span id="sL">Not clocked in</span></div>
+      </section>
+    </div>
+    <div class="boyrow">
+      <div class="say" id="say" role="status" aria-live="polite">Good morning! Punch in when you arrive.</div>
+      <svg id="boy" viewBox="0 0 120 190" width="110" height="170" role="img" aria-label="A boy in the classroom">
+        <rect x="40" y="128" width="16" height="48" rx="6" fill="#2f3b5c"/><rect x="64" y="128" width="16" height="48" rx="6" fill="#2f3b5c"/>
+        <ellipse cx="46" cy="178" rx="13" ry="6" fill="#222"/><ellipse cx="74" cy="178" rx="13" ry="6" fill="#222"/>
+        <rect x="32" y="74" width="56" height="64" rx="16" fill="#d9573f"/>
+        <rect x="16" y="80" width="14" height="46" rx="7" fill="#d9573f" transform="rotate(8 23 82)"/>
+        <g class="arm"><rect x="90" y="76" width="14" height="50" rx="7" fill="#d9573f"/><circle cx="97" cy="128" r="8" fill="#f0c49c"/></g>
+        <circle cx="60" cy="48" r="28" fill="#f0c49c"/>
+        <path d="M32 44 Q34 16 60 16 Q86 16 88 44 Q74 30 60 32 Q46 30 32 44Z" fill="#2a1a10"/>
+        <circle cx="50" cy="50" r="3" fill="#222"/><circle cx="70" cy="50" r="3" fill="#222"/>
+        <path d="M50 60 Q60 68 70 60" stroke="#222" fill="none" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="ledge"></div>
+  </main>
+</div>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+let target=8.5*36e5,offset=0,E=[],done=false;
+const now=()=>Date.now()+offset,pad=n=>String(n).padStart(2,"0");
+const fmt=ms=>{const s=Math.floor(Math.max(0,ms)/1000);return pad(Math.floor(s/3600))+"h "+pad(Math.floor(s%3600/60))+"m "+pad(s%60)+"s"};
+const clk=ms=>new Date(ms).toLocaleTimeString("en-US");
+const hrs=()=>+(target/36e5).toFixed(2);
+const day=()=>new Date().toDateString();
+function save(){try{localStorage.setItem("bbt",JSON.stringify({d:day(),t:target,E:E}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem("bbt")||"null");if(s&&s.d===day()){target=s.t;E=s.E||[]}}catch(e){}}
+function calc(){let tot=0,br=0;for(let i=0;i<E.length;i+=2){const end=i+1<E.length?E[i+1]:now();if(end>E[i])tot+=end-E[i];if(i+2<E.length)br+=Math.max(0,E[i+2]-end)}return{tot,br,rem:Math.max(0,target-tot),open:E.length%2===1}}
+let tt;function say(m){$("toast").textContent=m;clearTimeout(tt);tt=setTimeout(()=>$("toast").textContent="",3500)}
+function add(){const re=/(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*([ap])m?/gi,s=$("ti").value;let m,n=0;
+  while((m=re.exec(s))){let h=+m[1]%12;if(m[4].toLowerCase()==="p")h+=12;const d=new Date(now());d.setHours(h,+(m[2]||0),+(m[3]||0),0);E.push(d.getTime());n++}
+  if(!n){say("Type or paste times like 9:10 AM, then press Add");return}
+  $("ti").value="";say("Added "+n+(n>1?" times":" time"));render()}
+function punch(w){E.push(now());say("Punched "+w+" at "+clk(now()));render()}
+function bell(){try{const a=new(window.AudioContext||window.webkitAudioContext)();[0,.35,.7].forEach(t=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=880;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.2,a.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+t+.3);o.start(a.currentTime+t);o.stop(a.currentTime+t+.32)})}catch(e){}}
+function boy(c){let m,w=false;
+  if(done){m="Bye bye! See you tomorrow. Today’s lesson is finished, so the rest of the work waits till tomorrow.";w=true}
+  else if(!E.length)m="Good morning! Punch in when you arrive.";
+  else if(c.open&&c.rem<=6e5)m="Pack up your work now. Only a few minutes left!";
+  else if(c.open&&now()-E[0]<6e5)m="Do your work, you just arrived!";
+  else if(!c.open)m="Break time. Punch in when you are back.";
+  else m="Keep going, you are doing well.";
+  if($("say").textContent!==m)$("say").textContent=m;$("boy").classList.toggle("wave",w)}
+function render(){const c=calc();save();
+  $("title").textContent="Today’s lesson: your "+hrs()+" hour workday";$("hv").textContent=hrs().toFixed(1);
+  document.querySelectorAll("#modes button").forEach(b=>b.classList.toggle("on",Math.abs(+b.dataset.h-hrs())<.001));
+  const L=$("list");L.innerHTML="";
+  if(!E.length)L.textContent="No entries yet. Punch in, or type a time.";
+  E.forEach((t,i)=>{const d=document.createElement("div");d.textContent=(i+1)+".  "+(i%2?"Out":"In ")+"   "+clk(t);L.appendChild(d)});
+  if(c.open){const d=document.createElement("div");d.textContent="    Out   running…";L.appendChild(d)}
+  $("pin").disabled=c.open;$("pout").disabled=!c.open;$("undo").disabled=!E.length;
+  if(E.length&&c.tot>=target&&!done){done=true;bell()}if(c.tot<target)done=false;
+  const r=$("rem");r.classList.toggle("done",done);
+  r.textContent=done?"Time’s up!":fmt(c.rem);
+  $("sub").textContent=done?"Class dismissed. Go home!":!E.length?"time left, not clocked in":c.open?"time left, clock is running":"time left, clock is stopped";
+  boy(c);
+  const p=Math.min(1,c.tot/target);$("fill").style.width=p*100+"%";$("pct").textContent=Math.round(p*100)+"% done";
+  $("sW").textContent=fmt(c.tot);$("sB").textContent=fmt(c.br);
+  $("sL").textContent=!E.length?"Not clocked in":c.open?(done?"Now":clk(now()+c.rem)):"Punched out";}
+document.querySelectorAll("#modes button").forEach(b=>b.onclick=()=>{target=+b.dataset.h*36e5;render()});
+$("hm").onclick=()=>{target=Math.max(.5,hrs()-.5)*36e5;render()};$("hp").onclick=()=>{target=Math.min(16,hrs()+.5)*36e5;render()};
+$("add").onclick=add;$("ti").addEventListener("keydown",e=>{if(e.key==="Enter")add()});
+$("pin").onclick=()=>punch("in");$("pout").onclick=()=>punch("out");
+$("undo").onclick=()=>{E.pop();render()};$("clr").onclick=()=>{E=[];offset=0;render()};
+$("demo").onclick=()=>{offset=0;const n=now(),r=target-72e5-15e3,o1=n-r-18e5;E=[o1-72e5,o1,n-r];say("Demo shift: your time ends in about 15 seconds");render()};
+load();render();setInterval(render,500);
+})();
+</script>
+</body>
+</html>
